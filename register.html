@@ -286,17 +286,17 @@
 
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-    import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+    import { getFirestore, doc, setDoc, getDoc, collection, query, where, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
     const firebaseConfig = {
-  apiKey: "AIzaSyD41bc_RG0TAgX7fQEvXXfKwz8n84Otqw0",
-  authDomain: "glamour-emediong.firebaseapp.com",
-  projectId: "glamour-emediong",
-  storageBucket: "glamour-emediong.firebasestorage.app",
-  messagingSenderId: "830329910063",
-  appId: "1:830329910063:web:3867b3467f244c52b0a7da",
-  measurementId: "G-VMC8M8TNVT"
-};
+        apiKey: "AIzaSyD41bc_RG0TAgX7fQEvXXfKwz8n84Otqw0",
+        authDomain: "glamour-emediong.firebaseapp.com",
+        projectId: "glamour-emediong",
+        storageBucket: "glamour-emediong.firebasestorage.app",
+        messagingSenderId: "830329910063",
+        appId: "1:830329910063:web:3867b3467f244c52b0a7da",
+        measurementId: "G-VMC8M8TNVT"
+    };
 
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
@@ -314,34 +314,68 @@
         }
     }
 
-    document.getElementById('glamour-reg-form').addEventListener('submit', function(e) {
+    document.getElementById('glamour-reg-form').addEventListener('submit', async function(e) {
         e.preventDefault();
+        const btn = e.target.querySelector('button');
         const p1 = document.getElementById('reg-pass').value;
         const p2 = document.getElementById('reg-confirm').value;
+        
         if(p1 !== p2) { alert("Passwords do not match!"); return; }
 
-        // Clean and store username
         const username = document.getElementById('reg-user').value.toLowerCase().replace(/\s/g, '');
+        const email = document.getElementById('reg-email').value.toLowerCase();
 
-        formData = {
-            fullName: document.getElementById('reg-name').value,
-            username: username,
-            email: document.getElementById('reg-email').value,
-            phone: document.getElementById('reg-phone').value,
-            country: document.getElementById('reg-location').value,
-            password: p1,
-            balance: 0,
-            indirectEarnings: 0,
-            isActivated: false,
-            createdAt: new Date().toISOString()
-        };
+        btn.disabled = true;
+        btn.innerText = "Checking availability...";
 
-        document.getElementById('sum-name').innerText = formData.fullName;
-        document.getElementById('sum-user').innerText = "@" + formData.username;
-        document.getElementById('sum-phone').innerText = formData.phone;
-        document.getElementById('sum-loc').innerText = formData.country;
-        document.getElementById('step-1').classList.add('hidden');
-        document.getElementById('step-2').classList.remove('hidden');
+        try {
+            // Check if username exists
+            const userRef = doc(db, "users", username);
+            const userSnap = await getDoc(userRef);
+            if (userSnap.exists()) {
+                alert("This username is already taken!");
+                btn.disabled = false;
+                btn.innerText = "Create Account";
+                return;
+            }
+
+            // Check if email exists
+            const q = query(collection(db, "users"), where("email", "==", email));
+            const querySnapshot = await getDocs(q);
+            if (!querySnapshot.empty) {
+                alert("This email is already registered!");
+                btn.disabled = false;
+                btn.innerText = "Create Account";
+                return;
+            }
+
+            formData = {
+                fullName: document.getElementById('reg-name').value,
+                username: username,
+                email: email,
+                phone: document.getElementById('reg-phone').value,
+                country: document.getElementById('reg-location').value,
+                password: p1,
+                balance: 0,
+                indirectEarnings: 0,
+                isActivated: false,
+                createdAt: new Date().toISOString()
+            };
+
+            document.getElementById('sum-name').innerText = formData.fullName;
+            document.getElementById('sum-user').innerText = "@" + formData.username;
+            document.getElementById('sum-phone').innerText = formData.phone;
+            document.getElementById('sum-loc').innerText = formData.country;
+            document.getElementById('step-1').classList.add('hidden');
+            document.getElementById('step-2').classList.remove('hidden');
+
+        } catch (error) {
+            console.error(error);
+            alert("Connection error. Try again.");
+        } finally {
+            btn.disabled = false;
+            btn.innerText = "Create Account";
+        }
     });
 
     document.getElementById('firebase-trigger').addEventListener('click', async function() {
@@ -350,13 +384,9 @@
         btn.innerText = "Syncing Profile...";
 
         try {
-            // Save to Firebase
+            // Save to users collection
             await setDoc(doc(db, "users", formData.username), formData);
-            
-            // Sync username for dashboard display
             localStorage.setItem('glamour_username', formData.username);
-            
-            // Redirect
             window.location.href = "dashboard.html";
         } catch (error) {
             console.error(error);
