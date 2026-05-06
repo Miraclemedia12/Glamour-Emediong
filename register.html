@@ -272,12 +272,12 @@
 </div>
 
 <div id="toast" class="notification-toast">
-    <div class="bg-blue-500/10 p-2 rounded-full">
-        <i class="fas fa-user-circle text-blue-400 text-lg"></i>
+    <div id="toast-icon-bg" class="bg-blue-500/10 p-2 rounded-full">
+        <i id="toast-icon" class="fas fa-user-circle text-blue-400 text-lg"></i>
     </div>
     <div>
         <div class="flex justify-between items-center gap-4">
-            <div class="text-[9px] text-gray-500 font-bold uppercase tracking-tighter">Real-time Activity</div>
+            <div id="toast-label" class="text-[9px] text-gray-500 font-bold uppercase tracking-tighter">Real-time Activity</div>
             <div id="toast-time" class="text-[9px] text-gold-500 font-medium" style="color: var(--gold);">Just now</div>
         </div>
         <div id="toast-msg" class="text-xs text-white leading-tight"></div>
@@ -303,6 +303,21 @@
 
     let formData = {};
 
+    // Internal notification function to replace alert()
+    function notify(message, type = 'error') {
+        const toast = document.getElementById('toast');
+        const msg = document.getElementById('toast-msg');
+        const label = document.getElementById('toast-label');
+        const icon = document.getElementById('toast-icon');
+        
+        label.innerText = type === 'error' ? "System Alert" : "Success";
+        icon.className = type === 'error' ? "fas fa-exclamation-triangle text-red-500" : "fas fa-check-circle text-green-500";
+        msg.innerText = message;
+        
+        toast.classList.add('active');
+        setTimeout(() => toast.classList.remove('active'), 4000);
+    }
+
     window.togglePass = function(id, icon) {
         const input = document.getElementById(id);
         if (input.type === "password") {
@@ -320,7 +335,7 @@
         const p1 = document.getElementById('reg-pass').value;
         const p2 = document.getElementById('reg-confirm').value;
         
-        if(p1 !== p2) { alert("Passwords do not match!"); return; }
+        if(p1 !== p2) { notify("Passwords do not match!"); return; }
 
         const username = document.getElementById('reg-user').value.toLowerCase().replace(/\s/g, '');
         const email = document.getElementById('reg-email').value.toLowerCase();
@@ -329,23 +344,17 @@
         btn.innerText = "Checking availability...";
 
         try {
-            // Check if username exists
             const userRef = doc(db, "users", username);
             const userSnap = await getDoc(userRef);
             if (userSnap.exists()) {
-                alert("This username is already taken!");
-                btn.disabled = false;
-                btn.innerText = "Create Account";
+                notify("This username is already taken!");
                 return;
             }
 
-            // Check if email exists
             const q = query(collection(db, "users"), where("email", "==", email));
             const querySnapshot = await getDocs(q);
             if (!querySnapshot.empty) {
-                alert("This email is already registered!");
-                btn.disabled = false;
-                btn.innerText = "Create Account";
+                notify("This email is already registered!");
                 return;
             }
 
@@ -370,8 +379,7 @@
             document.getElementById('step-2').classList.remove('hidden');
 
         } catch (error) {
-            console.error(error);
-            alert("Connection error. Try again.");
+            notify("Connection error. Try again.");
         } finally {
             btn.disabled = false;
             btn.innerText = "Create Account";
@@ -384,13 +392,11 @@
         btn.innerText = "Syncing Profile...";
 
         try {
-            // Save to users collection
             await setDoc(doc(db, "users", formData.username), formData);
             localStorage.setItem('glamour_username', formData.username);
             window.location.href = "dashboard.html";
         } catch (error) {
-            console.error(error);
-            alert("Error: Connection failed.");
+            notify("Error: Connection failed.");
             btn.disabled = false;
         }
     });
@@ -403,15 +409,29 @@
     const locations = [{name: "Lagos, Nigeria", isEuro: false}, {name: "London, UK", isEuro: true}, {name: "Abuja, Nigeria", isEuro: false}, {name: "Berlin, Germany", isEuro: true}, {name: "Port Harcourt, Nigeria", isEuro: false}, {name: "Paris, France", isEuro: true}, {name: "Enugu, Nigeria", isEuro: false}, {name: "Madrid, Spain", isEuro: true}];
 
     function showToast() {
+        // Only trigger if a system alert isn't showing
         const toast = document.getElementById('toast');
+        if (toast.classList.contains('active')) {
+            setTimeout(showToast, 6000);
+            return;
+        }
+
         const msg = document.getElementById('toast-msg');
+        const label = document.getElementById('toast-label');
+        const icon = document.getElementById('toast-icon');
         const timeDisplay = document.getElementById('toast-time');
+        
+        label.innerText = "Real-time Activity";
+        icon.className = "fas fa-user-circle text-blue-400 text-lg";
+        
         const loc = locations[Math.floor(Math.random() * locations.length)];
         const user = loc.isEuro ? euroNames[Math.floor(Math.random() * euroNames.length)] : nigeriaNames[Math.floor(Math.random() * nigeriaNames.length)];
         const isRegister = Math.random() > 0.5;
         let amtString = isRegister ? (loc.isEuro ? "€7" : "₦14,000") : (loc.isEuro ? "€" + (Math.floor(Math.random() * 50) + 10) : "₦" + ((Math.floor(Math.random() * 45) + 5) * 2000).toLocaleString());
+        
         msg.innerHTML = `<span class="name-highlight">${user}</span> from ${loc.name} just <span class="text-white">${isRegister ? 'registered' : 'withdrew'}</span> <span class="amount-highlight">${amtString}</span>`;
         timeDisplay.innerText = "Just now";
+        
         toast.classList.add('active');
         setTimeout(() => toast.classList.remove('active'), 5000);
         setTimeout(showToast, 15000); 
