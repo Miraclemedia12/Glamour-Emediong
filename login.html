@@ -204,7 +204,7 @@
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
     import { getAuth, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-    import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-store.js";
+    import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
     const firebaseConfig = {
         apiKey: "AIzaSyD41bc_RG0TAgX7fQEvXXfKwz8n84Otqw0",
@@ -255,24 +255,36 @@
         btnText.innerText = "Verifying...";
 
         let finalEmail = identifier;
+        let finalUsername = identifier;
 
         try {
-            // If identifier is a username (no @), fetch associated email from Firestore
+            // Check if identifier is a username or email
             if (!identifier.includes('@')) {
                 const userRef = doc(db, "users", identifier);
                 const userSnap = await getDoc(userRef);
                 
                 if (userSnap.exists()) {
                     finalEmail = userSnap.data().email;
+                    finalUsername = identifier;
                 } else {
                     throw { code: 'auth/user-not-found' };
                 }
+            } else {
+                // If they used email, we should find their username for the dashboard session
+                // This is optional but good for your "Glamour" logic
+                finalUsername = identifier.split('@')[0]; 
             }
 
-            await signInWithEmailAndPassword(auth, finalEmail, password);
+            // Perform Authentication
+            const userCredential = await signInWithEmailAndPassword(auth, finalEmail, password);
+            
+            // Save username to local storage for the dashboard to display the user's name
+            localStorage.setItem('glamour_username', finalUsername);
+            
             window.location.href = "dashboard.html"; 
 
         } catch (error) {
+            console.error("Login Error:", error);
             loginBtn.disabled = false;
             btnSpinner.style.display = "none";
             btnText.innerText = "Sign In";
