@@ -164,9 +164,9 @@
 
     <form id="login-form" class="space-y-6">
         <div class="form-group">
-            <label>Email Address</label>
+            <label>Username or Email</label>
             <div class="input-container">
-                <input type="email" id="login-email" placeholder="email@glamour.com" required>
+                <input type="text" id="login-identifier" placeholder="Username or Email" required>
             </div>
         </div>
 
@@ -196,16 +196,15 @@
     </form>
 </div>
 
-<!-- Custom Notification UI -->
 <div id="custom-alert" class="custom-alert">
     <i class="fas fa-circle-exclamation text-red-500"></i>
     <span id="alert-msg" class="text-xs text-white"></span>
 </div>
 
-<!-- Firebase Modular SDK -->
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
     import { getAuth, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+    import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-store.js";
 
     const firebaseConfig = {
         apiKey: "AIzaSyD41bc_RG0TAgX7fQEvXXfKwz8n84Otqw0",
@@ -219,6 +218,7 @@
 
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
+    const db = getFirestore(app);
 
     const loginForm = document.getElementById('login-form');
     const loginBtn = document.getElementById('login-btn');
@@ -227,14 +227,12 @@
     const alertBox = document.getElementById('custom-alert');
     const alertMsg = document.getElementById('alert-msg');
 
-    // Show Notification function (No browser alert)
     function notify(message) {
         alertMsg.innerText = message;
         alertBox.classList.add('active');
         setTimeout(() => alertBox.classList.remove('active'), 4000);
     }
 
-    // Toggle Password Visibility
     document.getElementById('toggle-eye').addEventListener('click', function() {
         const passInput = document.getElementById('login-password');
         if (passInput.type === "password") {
@@ -249,29 +247,40 @@
     loginForm.addEventListener('submit', async (e) => {
         e.preventDefault();
         
-        const email = document.getElementById('login-email').value;
+        const identifier = document.getElementById('login-identifier').value.trim().toLowerCase();
         const password = document.getElementById('login-password').value;
 
-        // UI Loading State
         loginBtn.disabled = true;
         btnSpinner.style.display = "block";
         btnText.innerText = "Verifying...";
 
+        let finalEmail = identifier;
+
         try {
-            const userCredential = await signInWithEmailAndPassword(auth, email, password);
-            const user = userCredential.user;
-            // Success: Redirect to dashboard
+            // If identifier is a username (no @), fetch associated email from Firestore
+            if (!identifier.includes('@')) {
+                const userRef = doc(db, "users", identifier);
+                const userSnap = await getDoc(userRef);
+                
+                if (userSnap.exists()) {
+                    finalEmail = userSnap.data().email;
+                } else {
+                    throw { code: 'auth/user-not-found' };
+                }
+            }
+
+            await signInWithEmailAndPassword(auth, finalEmail, password);
             window.location.href = "dashboard.html"; 
+
         } catch (error) {
             loginBtn.disabled = false;
             btnSpinner.style.display = "none";
             btnText.innerText = "Sign In";
 
-            // Clean error handling
             let errorText = "Authentication failed. Please try again.";
-            if (error.code === 'auth/user-not-found') errorText = "Account not found.";
+            if (error.code === 'auth/user-not-found' || error.code === 'auth/invalid-credential') errorText = "Invalid login details.";
             if (error.code === 'auth/wrong-password') errorText = "Incorrect password.";
-            if (error.code === 'auth/invalid-email') errorText = "Invalid email format.";
+            if (error.code === 'auth/invalid-email') errorText = "Please enter a valid email or username.";
             
             notify(errorText);
         }
