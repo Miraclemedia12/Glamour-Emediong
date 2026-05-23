@@ -32,9 +32,40 @@
         }
 
         .copy-btn:active { transform: scale(0.9); }
+
+        /* Notice Modal Barrier styling */
+        #notice-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(5, 5, 5, 0.95);
+            backdrop-filter: blur(12px);
+            z-index: 99999;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
     </style>
 </head>
 <body class="flex items-center justify-center min-h-screen px-6">
+
+    <div id="notice-overlay">
+        <div class="payment-card p-8 w-full max-w-md text-center mx-4 border-amber-500/30 shadow-2xl">
+            <div class="h-16 w-16 bg-amber-500/10 border border-amber-500/30 rounded-full flex items-center justify-center mx-auto mb-6">
+                <i class="fas fa-exclamation-triangle text-amber-500 text-2xl"></i>
+            </div>
+            <h2 class="text-xl font-black italic gold-text uppercase tracking-wide mb-3">Important Notice</h2>
+            <p class="text-zinc-400 text-xs font-semibold uppercase tracking-[0.15em] mb-4">Payment Routing Restriction</p>
+            
+            <div class="bg-black/60 border border-red-500/20 p-5 rounded-2xl text-center mb-6">
+                <p class="text-red-400 font-black text-sm uppercase tracking-wider mb-1">⚠️ DO NOT USE OPAY</p>
+                <p class="text-zinc-400 text-[11px] leading-relaxed">Please do not initiate this transfer using an OPay account. Use alternative banking options to guarantee instant validation.</p>
+            </div>
+
+            <button onclick="acknowledgeNotice()" class="gold-gradient w-full py-4 rounded-xl text-[11px] text-black font-black uppercase tracking-widest shadow-xl active:scale-95 transition-transform">
+                I Acknowledge
+            </button>
+        </div>
+    </div>
 
     <div class="w-full max-w-md">
         <div class="text-center mb-8">
@@ -111,20 +142,25 @@
         import { getFirestore, doc, onSnapshot, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
         const firebaseConfig = {
-  apiKey: "AIzaSyD41bc_RG0TAgX7fQEvXXfKwz8n84Otqw0",
-  authDomain: "glamour-emediong.firebaseapp.com",
-  projectId: "glamour-emediong",
-  storageBucket: "glamour-emediong.firebasestorage.app",
-  messagingSenderId: "830329910063",
-  appId: "1:830329910063:web:3867b3467f244c52b0a7da",
-  measurementId: "G-VMC8M8TNVT"
-};
+            apiKey: "AIzaSyD41bc_RG0TAgX7fQEvXXfKwz8n84Otqw0",
+            authDomain: "glamour-emediong.firebaseapp.com",
+            projectId: "glamour-emediong",
+            storageBucket: "glamour-emediong.firebasestorage.app",
+            messagingSenderId: "830329910063",
+            appId: "1:830329910063:web:3867b3467f244c52b0a7da",
+            measurementId: "G-VMC8M8TNVT"
+        };
 
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
         const currentUsername = localStorage.getItem('glamour_username') || "EliteGuest";
 
         let liveSettings = {};
+
+        // Global closure controller for closing modal barrier safely
+        window.acknowledgeNotice = function() {
+            document.getElementById('notice-overlay').style.display = 'none';
+        };
 
         async function initPayment() {
             const adminDoc = await getDoc(doc(db, 'admin', 'settings'));
@@ -140,7 +176,6 @@
         function renderDetails(country) {
             let details = { amount: "", bank: "", acc: "", name: "" };
 
-            // Default fallback settings (if Firebase admin is empty)
             const defaults = {
                 Nigeria: { fee: "₦15,000", bank: "PAGA BANK", acc: "3815840672", name: "OMINIPAY DAVID OGBENNA" },
                 Ghana: { fee: "250 GHS", bank: "MTN MOMO", acc: "XXXXXXXXXX", name: "AGENT NAME" },
@@ -152,7 +187,6 @@
 
             const data = defaults[country] || defaults["Nigeria"];
 
-            // Prioritize liveSettings from Firebase if they exist
             document.getElementById('displayAmount').innerText = data.fee;
             document.getElementById('displayBank').innerText = liveSettings[`${getPrefix(country)}Bank`] || data.bank;
             document.getElementById('displayAcc').innerText = liveSettings[`${getPrefix(country)}Acc`] || data.acc;
@@ -178,27 +212,3 @@
             const tgLink = liveSettings.tgLink || "TrustedParamount";
             const handle = tgLink.replace('@', '');
             const msg = `Hello Admin, I have just made payment for my activation.\n\nUsername: @${currentUsername}`;
-            window.open(`https://t.me/${handle}?text=${encodeURIComponent(msg)}`);
-        };
-
-        function startTimer(duration) {
-            let timer = duration, minutes, seconds;
-            const display = document.getElementById('timer');
-            const countdown = setInterval(() => {
-                minutes = parseInt(timer / 60, 10);
-                seconds = parseInt(timer % 60, 10);
-                minutes = minutes < 10 ? "0" + minutes : minutes;
-                seconds = seconds < 10 ? "0" + seconds : seconds;
-                display.textContent = minutes + ":" + seconds;
-                if (--timer < 0) {
-                    clearInterval(countdown);
-                    display.textContent = "EXPIRED";
-                    alert("Payment window expired. Please refresh.");
-                }
-            }, 1000);
-        }
-
-        initPayment();
-    </script>
-</body>
-</html>
