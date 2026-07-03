@@ -221,7 +221,6 @@
             <i class="fas fa-user-circle text-xl"></i>
             <span class="text-[8px] font-black uppercase tracking-widest">Profile</span>
         </div>
-        <!-- Logout Added -->
         <div onclick="handleLogout()" class="flex flex-col items-center gap-1.5 text-zinc-700 active:text-red-500 transition-colors">
             <i class="fas fa-sign-out-alt text-xl"></i>
             <span class="text-[8px] font-black uppercase tracking-widest">Logout</span>
@@ -284,7 +283,12 @@
         const db = getFirestore(app);
         const auth = getAuth(app);
 
-        const currentUsername = localStorage.getItem('glamour_username') || "EliteGuest";
+        // Strict Route Protection: Block access if the user is not authenticated or session doesn't exist
+        const currentUsername = localStorage.getItem('glamour_username');
+        if (!currentUsername || currentUsername === "EliteGuest") {
+            window.location.href = "login.html";
+        }
+
         document.getElementById('userDisplay').innerText = "@" + currentUsername;
         document.getElementById('topUserDisplay').innerText = currentUsername.toUpperCase();
 
@@ -293,20 +297,36 @@
         onSnapshot(userDocRef, (snapshot) => {
             if (snapshot.exists()) {
                 syncUI(snapshot.data());
+            } else {
+                // If route data is invalid or deleted, log out to ensure security
+                window.location.href = "login.html";
             }
         });
 
         function syncUI(userData) {
             const country = userData.country || "Nigeria";
+            const plan = userData.selectedPlan || "regular";
             let symbol = "₦", bonus = 14000;
 
-            switch(country) {
-                case "Ghana": symbol = "GHS "; bonus = 220; break;
-                case "Cameroon": symbol = "XAF "; bonus = 13000; break;
-                case "Uganda": symbol = "UGX "; bonus = 85000; break;
-                case "South Africa": symbol = "R "; bonus = 450; break;
-                case "Kenya": symbol = "KSh "; bonus = 2800; break;
-                default: symbol = "₦"; bonus = 14000;
+            // Handle conversions seamlessly depending on user's selected Plan profile config
+            if (plan.toLowerCase() === "prime") {
+                switch(country) {
+                    case "Ghana": symbol = "GHS "; bonus = 250; break;
+                    case "Cameroon": symbol = "XAF "; bonus = 15000; break;
+                    case "Uganda": symbol = "UGX "; bonus = 97000; break;
+                    case "South Africa": symbol = "R "; bonus = 510; break;
+                    case "Kenya": symbol = "KSh "; bonus = 3200; break;
+                    default: symbol = "₦"; bonus = 16000;
+                }
+            } else {
+                switch(country) {
+                    case "Ghana": symbol = "GHS "; bonus = 220; break;
+                    case "Cameroon": symbol = "XAF "; bonus = 13000; break;
+                    case "Uganda": symbol = "UGX "; bonus = 85000; break;
+                    case "South Africa": symbol = "R "; bonus = 450; break;
+                    case "Kenya": symbol = "KSh "; bonus = 2800; break;
+                    default: symbol = "₦"; bonus = 14000;
+                }
             }
 
             const currentBal = (userData.balance || 0) === 0 ? bonus : userData.balance;
