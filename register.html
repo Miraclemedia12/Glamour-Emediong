@@ -328,24 +328,29 @@
     const db = getFirestore(app);
 
     let formData = {};
+    
+    // Globally defined state tracking variables
+    let selectedPlan = "regular";
+    let finalAmount = 14000;
 
-   // URL Query Tracker Configuration
-window.addEventListener('DOMContentLoaded', () => {
-    const urlParams = new URLSearchParams(window.location.search);
-    const planParam = urlParams.get('plan');
-    const badge = document.getElementById('plan-badge-container');
+    // URL Query Tracker Configuration
+    window.addEventListener('DOMContentLoaded', () => {
+        const urlParams = new URLSearchParams(window.location.search);
+        const planParam = urlParams.get('plan');
+        const badge = document.getElementById('plan-badge-container');
 
-    if (planParam && planParam.toLowerCase() === 'prime') {
-        selectedPlan = "prime";
-        finalAmount = 20000;
-        badge.innerHTML = `<i class="fas fa-crown mr-2 text-yellow-400"></i> Selected Plan: Prime Platinum Plus`;
-        badge.style.borderColor = "rgba(74, 222, 128, 0.4)";
-    } else {
-        selectedPlan = "regular";
-        finalAmount = 15000;
-        badge.innerHTML = `<i class="fas fa-shield-alt mr-2"></i> Selected Plan: Regular Platinum Module`;
-    }
-});
+        if (planParam && planParam.toLowerCase() === 'prime') {
+            selectedPlan = "prime";
+            finalAmount = 16000;
+            badge.innerHTML = `<i class="fas fa-crown mr-2 text-yellow-400"></i> Selected Plan: Prime Platinum Plus`;
+            badge.style.borderColor = "rgba(74, 222, 128, 0.4)";
+        } else {
+            selectedPlan = "regular";
+            finalAmount = 14000;
+            badge.innerHTML = `<i class="fas fa-shield-alt mr-2"></i> Selected Plan: Regular Platinum Module`;
+        }
+    });
+
     function notify(message, type = 'error') {
         const toast = document.getElementById('toast');
         const msg = document.getElementById('toast-msg');
@@ -410,7 +415,8 @@ window.addEventListener('DOMContentLoaded', () => {
                 balance: 0,
                 indirectEarnings: 0,
                 isActivated: false,
-                selectedPlan: selectedPlan, // Saves plan configuration directly inside Firebase profile data structure
+                selectedPlan: selectedPlan,             // "prime" or "regular" saved directly to user data profile
+                registrationAmount: finalAmount,       // 16000 or 14000 trackable value saved directly to user profile
                 createdAt: new Date().toISOString()
             };
 
@@ -418,7 +424,7 @@ window.addEventListener('DOMContentLoaded', () => {
             document.getElementById('sum-user').innerText = "@" + formData.username;
             document.getElementById('sum-phone').innerText = formData.phone;
             document.getElementById('sum-loc').innerText = formData.country;
-            document.getElementById('sum-plan').innerText = formData.selectedPlan; // Displays chosen option instantly
+            document.getElementById('sum-plan').innerText = formData.selectedPlan.toUpperCase() + " PLAN (₦" + formData.registrationAmount.toLocaleString() + ")"; 
             document.getElementById('step-1').classList.add('hidden');
             document.getElementById('step-2').classList.remove('hidden');
 
